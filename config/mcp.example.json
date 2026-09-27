@@ -1,0 +1,12 @@
+{
+  "servers": {
+    "exa": {
+      "url": "https://mcp.exa.ai/mcp",
+      "capabilities": {
+        "web_search": {
+          "tool": "web_search_exa"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,16 @@
+numpy
+pandas
+matplotlib
+scipy
+openpyxl
+fastapi
+uvicorn
+catboost>=1.2.10,<2
+llama-index
+llama-index-embeddings-huggingface
+pyshp
+pypdf
+python-docx
+python-dotenv
+psycopg[binary]>=3.3,<4
+-r requirements-agent.txt

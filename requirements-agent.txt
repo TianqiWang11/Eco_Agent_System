@@ -1,0 +1,6 @@
+# Runtime adapters. Keep MCP on the ClientSession-based 1.x API.
+jsonschema>=4.23,<5
+httpx>=0.27,<1
+mcp>=1.26,<2
+opentelemetry-sdk>=1.39,<2
+opentelemetry-exporter-otlp-proto-http>=1.39,<2

@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#071a16" />
+  <title>车八岭生态数字孪生与AI智能分析平台</title>
+  <link rel="icon" href="/portal-assets/platform-logo.svg?v=20260824e" type="image/svg+xml" />
+  <link rel="stylesheet" href="/portal-assets/platform.css?v=20260914c" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 44 44" role="img">
+            <path d="M22 5 7.5 29.5h29Z" />
+            <path d="M22 29.5v9" />
+          </svg>
+        </div>
+        <div>
+          <h1 id="platform-title">车八岭生态数字孪生与AI智能分析平台</h1>
+          <p>CHEBALING ECOLOGICAL DIGITAL TWIN</p>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <div class="system-clock" id="system-clock">--</div>
+        <div class="health-chip"><i></i><span>系统运行中</span></div>
+        <button class="icon-button" type="button" title="刷新状态" id="refresh-status">↻</button>
+      </div>
+    </header>
+
+    <aside class="sidebar" aria-label="主导航">
+      <nav>
+        <button class="nav-item active" data-panel="workspace">
+          <span class="nav-icon">◇</span><span>智能孪生</span>
+        </button>
+        <button class="nav-item" data-panel="data">
+          <span class="nav-icon sql-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <ellipse cx="12" cy="5" rx="7" ry="3" />
+              <path d="M5 5v6c0 1.7 3.1 3 7 3s7-1.3 7-3V5M5 11v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6" />
+            </svg>
+          </span><span>数据中心</span>
+        </button>
+      </nav>
+      <div class="sidebar-footer">
+        <span>CBL Platform</span>
+        <small>演示版 v0.2</small>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <section class="status-strip" aria-label="服务状态">
+        <div class="status-card">
+          <span class="status-dot ready"></span>
+          <div><small>后端服务</small><strong id="api-status">连接正常</strong></div>
+        </div>
+        <div class="status-card">
+          <span class="status-dot ready"></span>
+          <div><small>AI智能分析</small><strong id="ai-status">服务就绪</strong></div>
+        </div>
+        <div class="status-card">
+          <span class="status-dot ready" id="data-status-dot"></span>
+          <div><small>业务数据源</small><strong id="data-status">正在检查</strong></div>
+        </div>
+        <div class="status-card">
+          <span class="status-dot standby" id="twin-status-dot"></span>
+          <div><small>数字孪生</small><strong id="twin-status">等待连接</strong></div>
+        </div>
+      </section>
+
+      <section class="panel-view active" id="panel-workspace">
+        <div class="workspace-grid">
+          <section class="twin-panel panel">
+            <div class="panel-header">
+              <div>
+                <span class="eyebrow">DIGITAL TWIN</span>
+                <h2>数字孪生可视化</h2>
+              </div>
+              <div class="panel-actions">
+                <button type="button" class="ghost-button" id="reload-twin">重新连接</button>
+                <button type="button" class="ghost-button" id="open-twin">新窗口</button>
+              </div>
+            </div>
+
+            <div class="twin-stage" id="twin-stage">
+              <iframe id="twin-frame" tabindex="0" title="车八岭数字孪生可视化" allow="autoplay; fullscreen; microphone" allowfullscreen></iframe>
+              <button type="button" class="twin-return-button" id="reset-twin" title="返回数字孪生初始场景">
+                <span aria-hidden="true">←</span> 返回初始场景
+              </button>
+              <div class="twin-placeholder" id="twin-placeholder">
+                <div class="contour contour-one"></div>
+                <div class="contour contour-two"></div>
+                <div class="contour contour-three"></div>
+                <div class="mountain-mark" aria-hidden="true">
+                  <svg viewBox="0 0 220 120">
+                    <path d="M10 105 63 40l25 31 31-58 91 92Z" />
+                    <path d="m63 40 25 31 17-31 14-27 35 40" />
+                  </svg>
+                </div>
+                <h3>连接车八岭数字孪生场景</h3>
+                <p>通过 Pixel Streaming 在浏览器中实时查看和操作UE场景</p>
+                <div class="stream-address">
+                  <input id="stream-url" type="url" aria-label="Pixel Streaming地址" placeholder="Pixel Streaming 地址" />
+                  <button type="button" class="primary-button" id="connect-twin">连接场景</button>
+                </div>
+              </div>
+              <div class="scene-overlay">
+                <span id="scene-object">点击画面后使用 WASD；按住左键拖动视角</span>
+              </div>
+            </div>
+
+            <div class="scene-toolbar">
+              <button type="button">全景视角</button>
+              <button type="button">保护区</button>
+              <button type="button">森林样地</button>
+              <button type="button">网格样地</button>
+              <button type="button">树种资源</button>
+            </div>
+          </section>
+
+          <section class="ai-panel panel">
+            <div class="panel-header ai-header">
+              <div>
+                <span class="eyebrow">ECO AI</span>
+                <h2>AI智能助手</h2>
+              </div>
+              <button type="button" class="ghost-button" id="clear-chat">清空</button>
+            </div>
+
+            <div class="chat-messages" id="chat-messages" aria-live="polite" tabindex="0" aria-label="AI 对话记录，可滚动查看">
+              <article class="message assistant-message">
+                <div class="avatar">AI</div>
+                <div class="message-body">
+                  <p>您好，我可以查询物种数量、平均胸径和树高，统计生物量（AGB）与物种贡献，分析结构复杂度，并生成直方图和空间分布图。</p>
+                  <div class="prompt-list">
+                    <button type="button" data-prompt="当前数据有多少个物种">物种数量统计</button>
+                    <button type="button" data-prompt="统计当前数据的总生物量">总生物量统计</button>
+                    <button type="button" data-prompt="基于当前数据画一张AGB直方统计图">生成 AGB 直方图</button>
+                    <button type="button" data-prompt="生成树高网格聚合图">生成树高分布图</button>
+                    <button type="button" data-prompt="生成结构复杂度综合得分的20m网格分布图">结构复杂度分析</button>
+                  </div>
+                </div>
+              </article>
+            </div>
+
+            <form class="chat-composer" id="chat-form">
+              <textarea id="chat-input" rows="2" maxlength="2000" placeholder="例如：统计总生物量，或生成树高网格分布图……"></textarea>
+              <div class="composer-footer">
+                <span>Enter发送 · Shift+Enter换行</span>
+                <button class="send-button" type="submit" id="send-button" aria-label="发送">发送</button>
+              </div>
+            </form>
+          </section>
+        </div>
+      </section>
+
+      <section class="panel-view" id="panel-data">
+        <div class="overview-panel data-center-panel panel">
+          <span class="eyebrow">DATA CENTER</span>
+          <h2>车八岭单木数据中心</h2>
+          <p class="section-intro">查询样地单木固定属性及2016、2021、2025年度测量记录。</p>
+          <div class="feature-grid">
+            <article><strong id="database-state">检查中</strong><span>PostgreSQL</span></article>
+            <article><strong id="tree-count">--</strong><span>对应单木</span></article>
+            <article><strong id="species-count">--</strong><span>树种数量</span></article>
+            <article><strong id="measurement-count">--</strong><span>年度测量记录</span></article>
+          </div>
+
+          <form class="data-query-form" id="tree-query-form">
+            <label>编号<input id="tree-id-filter" type="search" maxlength="64" placeholder="支持部分编号" /></label>
+            <label>树种<input id="species-filter" type="search" maxlength="100" placeholder="例如：甜槠" /></label>
+            <label>样地编号<input id="plot-filter" type="search" maxlength="64" placeholder="例如：20GQ085" /></label>
+            <label>测量年份
+              <select id="year-filter">
+                <option value="">全部年份</option>
+                <option value="2016">2016</option>
+                <option value="2021">2021</option>
+                <option value="2025">2025</option>
+              </select>
+            </label>
+            <div class="data-query-actions">
+              <button type="submit" class="primary-button">查询</button>
+              <button type="button" class="ghost-button" id="reset-tree-query">重置</button>
+            </div>
+          </form>
+
+          <div class="data-table-wrap">
+            <table class="data-table">
+              <thead><tr>
+                <th>编号</th><th>树种</th><th>样地</th><th>最新年份</th>
+                <th>胸径（m）</th><th>树高（m）</th><th></th>
+              </tr></thead>
+              <tbody id="tree-table-body"><tr><td colspan="7">正在连接数据库……</td></tr></tbody>
+            </table>
+          </div>
+          <div class="data-pagination">
+            <span id="tree-result-count">--</span>
+            <div>
+              <button type="button" class="ghost-button" id="tree-prev-page">上一页</button>
+              <span id="tree-page-label">第 1 / 1 页</span>
+              <button type="button" class="ghost-button" id="tree-next-page">下一页</button>
+            </div>
+          </div>
+          <section class="tree-detail" id="tree-detail" hidden></section>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/portal-assets/agent.js?v=20260914c" defer></script>
+  <script src="/portal-assets/platform.js?v=20260915a" defer></script>
+</body>
+</html>

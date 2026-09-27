@@ -1,0 +1,75 @@
+# Secrets and machine-local configuration
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Unreal Engine generated files
+/Binaries/
+/DerivedDataCache/
+/Intermediate/
+/Saved/
+/.vs/
+/.vscode/
+*.VC.db
+*.VC.opendb
+*.sln
+*.suo
+Build/Windows/FileOpenOrder/
+Plugins/**/Binaries/
+Plugins/**/Intermediate/
+Plugins/**/Saved/
+
+# Local UE packages and releases
+/artifacts/packages/*
+!/artifacts/packages/README.md
+/.ue_prereqs/
+
+# Pixel Streaming runtime and downloaded dependencies
+/infrastructure/ue-connection/.runtime/
+/infrastructure/ue-connection/.material_backups/
+/infrastructure/ue-connection/PixelStreamingInfrastructure-UE5.4.zip
+/pixel_streaming/
+**/node_modules/
+**/platform_scripts/cmd/node/
+**/logs/
+
+# Python environments and caches
+**/.venv/
+**/venv/
+**/env/
+**/__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+/.uv-cache/
+/data/processed/
+/data/database_origin_table/
+/data/reference/source_data/
+/data/reference/source_documents/
+/data/knowledge/clean/
+/data/knowledge/processed/
+/storage/knowledge_index/
+/storage/agent/
+/storage/logs/
+/outputs/
+
+# Preserved history from the former nested AI repository
+/.legacy-git/
+
+# Runtime output and temporary files
+*.log
+*.tmp
+*.temp
+*.bak
+*.pid
+Thumbs.db
+.DS_Store
+._*
+__MACOSX/

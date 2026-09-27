@@ -1,0 +1,8 @@
+set Ultra_Dynamic_Sky_C "Use System Time" False
+set Ultra_Dynamic_Sky_C "Animate Time Of Day" False
+set Ultra_Dynamic_Sky_C "Time of Day" 1200
+set Ultra_Dynamic_Weather_C Weather UDS_Weather_Settings'/Game/UltraDynamicSky/Blueprints/Weather_Effects/Weather_Presets/Clear_Skies.Clear_Skies'
+set Ultra_Dynamic_Weather_C "Cloud Coverage" 0
+set Ultra_Dynamic_Weather_C Rain 0
+set Ultra_Dynamic_Weather_C Fog 0
+set Ultra_Dynamic_Weather_C "Thunder/Lightning" 0
