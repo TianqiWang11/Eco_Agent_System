@@ -1,45 +1,35 @@
-# 车八岭生态数字孪生与 AI 智能分析平台
+# Eco Agent System
 
-本仓库统一管理 Agent、平台服务、UE 连接和项目数据。生态业务库是本机 PostgreSQL，通过 `.env` 的 `DATABASE_URL` 连接；UE 工程与打包产物放在独立本地目录中。
+Eco Agent System 是一个面向生态数字孪生场景的智能 Agent 原型系统，探索大语言模型、生态数据分析、预测计算与三维可视化之间的协同。
 
-## 目录结构
+## 项目概述
 
-- `src/agent/`：Harness、Session、Tools/MCP、Sandbox 和 Telemetry。
-- `src/platform/`、`frontend/`：FastAPI 平台接口与 Web 门户。
-- `infrastructure/ue-connection/`：平台启动、停止、UE 重启、诊断、Pixel Streaming 和打包脚本。
-- `data/reference/source_data/`：未经统一入库的原始业务表格和 GIS 数据。
-- `data/reference/source_documents/`：RAG 的原始 PDF、Word 和 PPT 资料。
-- `data/knowledge/`：经过提取、清洗的知识文本。
-- `data/database_origin_table/`、`data/processed/`：数据库导入来源与预测输出。
+系统采用模块化 Agent 架构，将模型推理、上下文管理、任务状态、工具调用、沙箱隔离和运行观测分离设计。Agent 可以围绕生态数据完成查询、统计、分析与预测，并与外部数据服务和可视化系统进行交互。
 
-预测结果驱动 UE 参数树的实现与当前打包限制见
-[`docs/prediction-ue-integration.md`](docs/prediction-ue-integration.md)。
-- `config/`、`storage/`：MCP 配置示例与 Agent 本地持久状态。
-- `artifacts/packages/`：UE 打包产物的占位说明，实际产物不进入 Git。
-- `启动平台.bat`、`停止平台.bat`：Windows 一键启停入口。
+## 核心能力
 
-服务模块、工具和测试说明见 [服务说明](docs/service.md)。
+- 有限状态的 Agent 执行循环与持久化任务会话
+- 生态数据查询、统计分析和生长预测
+- 本地工具、MCP 外部工具与受控沙箱
+- 工具审批、网络策略和运行状态观测
+- PostgreSQL 数据服务集成
+- Unreal Engine 可视化与树木模型控制接口
+- 面向 Web 平台的对话和结果展示
 
-## UE 本地数据
+## 总体架构
 
-UE 相关大型文件统一存放在 `D:\TQ_Projects\UE_data`：
+系统主要由 Harness、Session、Tools、Sandbox、Telemetry、平台服务和可视化连接模块组成。各模块通过结构化 Action、事件和工具契约协同，便于后续扩展为更完整的分布式 Agent 系统。
 
-- `CheBaLingPlatform/`：UE 5.4 工程源文件、插件和缓存。
-- `packages/`：Development、Debug、Staged 和正式打包产物。
-- `PixelStreamingInfrastructure-UE5.4/`：官方 Pixel Streaming 运行环境。
-- `material-backups/`：材质修复备份。
+## 使用说明
 
-脚本默认使用上述目录。如需换盘或换路径，设置环境变量 `CHEBALING_UE_DATA_ROOT` 即可，无需修改项目代码。
+项目运行前需要准备 Python 环境，并根据示例配置模型服务和数据库连接。数据库、三维工程及相关运行组件均可按实际部署环境选择性接入。
 
-## 本地启动
+本仓库为公开代码版本，不包含原始生态调查数据、论文、内部项目文档、访问密钥、数据库内容及大型运行资产。
 
-1. 确保 `D:\TQ_Projects\UE_data` 中的 UE 文件完整，并已准备根目录 `.venv`、`.env` 与 PostgreSQL。
-2. 双击 `启动平台.bat`，访问 `http://127.0.0.1:8000`。
-3. 使用 `停止平台.bat` 停止本项目启动的服务。
+## 项目状态
 
-## Git 约定
+当前版本主要用于研究、开发和演示，仍在持续完善模型能力、预测方法、可视化交互和生产部署方案。
 
-- AI、Web、后端、编排脚本和数据接口共用当前这一个 Git 仓库。
-- UE 工程、打包产物、缓存、Python/Node 环境、运行日志、密钥和临时文件不提交。
-- 图片、Office/PDF、GIS 等必要的二进制参考资料使用 Git LFS。
-- `.env.example` 可以提交，真实 `.env` 只保存在本机。
+## License
+
+本项目的使用与分发遵循仓库许可证。
