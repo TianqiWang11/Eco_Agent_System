@@ -1,9 +1,12 @@
-from shutil import rmtree
-from llama_index.core import VectorStoreIndex, SimpleDirectoryReader
+import chromadb
+from pathlib import Path
+from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, StorageContext
 from llama_index.core.node_parser import SentenceSplitter
+from llama_index.vector_stores.chroma import ChromaVectorStore
 from src.agent.tools.local_tools.knowledge.config import (
     KNOWLEDGE_DIR,
     PERSIST_DIR,
+    COLLECTION_NAME,
     CHUNK_SIZE,
     CHUNK_OVERLAP,
     apply_knowledge_settings,
@@ -26,14 +29,17 @@ def build_index():
         file_path = metadata.get("file_path", "")
         node.metadata = {
             **metadata,
-            "source_name": file_path.split("/")[-1].replace(".md", "") if file_path else "unknown",
+            "source_name": Path(file_path).stem if file_path else "unknown",
         }
 
-    if PERSIST_DIR.exists():
-        rmtree(PERSIST_DIR)
-
-    index = VectorStoreIndex(nodes, show_progress=True)
-    index.storage_context.persist(persist_dir=str(PERSIST_DIR))
+    PERSIST_DIR.mkdir(parents=True, exist_ok=True)
+    client = chromadb.PersistentClient(path=str(PERSIST_DIR))
+    if any(getattr(item, "name", item) == COLLECTION_NAME for item in client.list_collections()):
+        client.delete_collection(COLLECTION_NAME)
+    collection = client.get_or_create_collection(COLLECTION_NAME, embedding_function=None)
+    vector_store = ChromaVectorStore(chroma_collection=collection)
+    storage_context = StorageContext.from_defaults(vector_store=vector_store)
+    index = VectorStoreIndex(nodes, storage_context=storage_context, show_progress=True)
     return index
 
 

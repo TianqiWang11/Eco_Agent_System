@@ -101,8 +101,12 @@ def test_tool_loop_and_trace_redaction(build):
     assert state["status"] == "completed"
     assert state["results"] == [{"value": 6}]
     assert rt.store.authenticate(sid, token)
-    events = rt.store.events(sid)
+    events = rt.store.developer_events(sid)
     assert "tool.completed" in [e["kind"] for e in events]
+    assert [(e["stage"], e["message"]) for e in rt.store.events(sid)] == [
+        ("understanding", "正在理解你的需求…"),
+        ("working", "正在调用工具处理任务…"),
+    ]
     assert "secret" not in json.dumps(events)
     assert "private prompt" not in json.dumps(events)
     assert any(m["role"] == "tool" for m in rt.model.contexts[-1])
@@ -232,7 +236,7 @@ def test_specialized_tools_are_hidden_without_explicit_intent():
     assert "sandbox_python" not in ordinary
     assert "ue_scene" not in ordinary
     assert "mcp_call_tool" not in ordinary
-    assert "sandbox_python" in relevant_tool_names("请在Sandbox运行Python脚本")
+    assert "sandbox_python" not in relevant_tool_names("请在Sandbox运行Python脚本")
     assert relevant_tool_names("请介绍你的能力，不要查询数据") == set()
     assert relevant_tool_names("查询数据库中的样地数量") == {"database"}
 
@@ -308,9 +312,11 @@ def test_api_auth_sse_and_approval(build, monkeypatch):
         assert client.get(f"/agent/sessions/{sid}").status_code == 401
         assert client.get(f"/agent/sessions/{sid}", headers={"Authorization": "Bearer wrong"}).status_code == 404
         events = client.get(f"/agent/sessions/{sid}/events", headers=headers)
-        assert "approval.requested" in events.text and "sensitive prompt" not in events.text
+        assert "user.progress" in events.text and "sensitive prompt" not in events.text
         assert "calculate" not in events.text and "call_id" not in events.text
         task = client.get(f"/agent/sessions/{sid}", headers=headers).json()
+        assert not {"status", "turn", "step", "contract_version"} & set(task)
+        assert task["phase"] == "needs_approval"
         assert set(task["approval"]) == {"digest", "summary"}
         response = client.post(f"/agent/sessions/{sid}/approval", headers=headers,
             json={"digest": task["approval"]["digest"], "allow": True})
@@ -363,7 +369,7 @@ def test_real_mcp_sdk_tools_and_resources(build):
         context.policy = Policy()
         with pytest.raises(PermissionError):
             asyncio.run(adapter.request("list_tools", {"server": "fixture"}, context))
-        assert rt.store.events(state["id"])[-1]["kind"] == "network.denied"
+        assert rt.store.developer_events(state["id"])[-1]["kind"] == "network.denied"
 
 
 def test_mcp_web_search_capability_registers_stable_tool():
@@ -498,7 +504,8 @@ def test_otlp_trace_log_metrics_export_not_raw_prompt(tmp_path, monkeypatch):
         telemetry.logger_provider.force_flush()
         assert {"/v1/traces", "/v1/logs", "/v1/metrics"} <= {p for p, _ in received}
         assert all(b"TOP_SECRET_PROMPT" not in body for _, body in received)
-        assert set(store.events(state["id"])[0]) == {"id", "kind", "time", "message"}
+        assert store.events(state["id"]) == []
+        assert store.developer_events(state["id"])[0]["details"] == {"chars": "17"}
     finally:
         telemetry.close(); server.shutdown(); server.server_close(); thread.join()
 

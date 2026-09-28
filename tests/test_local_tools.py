@@ -24,6 +24,7 @@ def frame(monkeypatch):
         "wood_density_g_cm3": [0.5, 0.6, 0.7]})
     for name in ("load_traits", "load_monitoring_data", "load_grid_plot_data"):
         monkeypatch.setattr(loader, name, lambda: value.copy())
+    monkeypatch.setattr("src.agent.environment.load_analysis_dataset", lambda dataset: value.copy())
     return value
 
 

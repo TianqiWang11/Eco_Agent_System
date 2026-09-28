@@ -88,6 +88,10 @@ class ActionExecutor:
             })
         state["blocks"].append(block)
         state["results"].extend(results)
+        completed = state.setdefault("task_state", {}).setdefault("completed_steps", [])
+        completed.extend({"tool": call["name"], "result": "error" if result.get("isError") else "ok"}
+                         for call, result in zip(state["pending"], results))
+        state["task_state"]["completed_steps"] = completed[-12:]
         state["pending"], state["approval"], state["current_action"] = [], None, None
         self._set_history_status(state, "completed")
         self.store.save(state)

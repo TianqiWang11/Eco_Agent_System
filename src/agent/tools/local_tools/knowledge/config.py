@@ -3,7 +3,8 @@ from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from src.project_paths import KNOWLEDGE_CLEAN_DIR, SERVICE_ROOT
 
 KNOWLEDGE_DIR = KNOWLEDGE_CLEAN_DIR
-PERSIST_DIR = SERVICE_ROOT / "storage" / "knowledge_index"
+PERSIST_DIR = SERVICE_ROOT / "storage" / "chroma"
+COLLECTION_NAME = "eco_knowledge"
 
 EMBED_MODEL_NAME = "BAAI/bge-small-zh-v1.5"
 DEFAULT_TOP_K = 4

@@ -28,22 +28,16 @@ GET_DATA_SCHEMA = {
 
 
 def load_dataset(arguments: dict, require_year: bool = False):
-    from . import loader
-
-    loaders = {
-        "traits": loader.load_traits,
-        "monitoring": loader.load_monitoring_data,
-        "grid_plot": loader.load_grid_plot_data,
-    }
+    from src.agent.environment import load_analysis_dataset
     dataset = arguments["dataset"]
     year = arguments.get("year")
-    if dataset not in loaders:
+    if dataset not in {"traits", "monitoring", "grid_plot"}:
         raise ValueError("不支持该数据集")
     if year is not None and (dataset != "monitoring" or year not in {2016, 2021}):
         raise ValueError("只有监测数据支持2016/2021年份选择")
     if dataset == "monitoring" and require_year and year is None:
         raise ValueError("请明确监测数据年份：2016或2021")
-    frame = loaders[dataset]().copy()
+    frame = load_analysis_dataset(dataset)
     if year is not None:
         column = f"dbh_{year}_cm"
         if column not in frame:

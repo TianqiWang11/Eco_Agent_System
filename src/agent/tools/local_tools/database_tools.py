@@ -8,11 +8,15 @@ from src.platform.data.database import (
     search_trees,
     tree_detail,
 )
+from src.agent.environment.catalog import describe_catalog
 
 
 def query_database(arguments: dict) -> dict:
     operation = arguments["operation"]
     try:
+        if operation == "describe_schema":
+            return {"operation": operation, **describe_catalog(arguments.get("table"))}
+
         if operation == "summary":
             return {"operation": operation, "summary": data_summary()}
 

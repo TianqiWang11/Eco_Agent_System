@@ -67,9 +67,12 @@ _GRID_PLOT_ALIAS_LOOKUP = {
 _GRID_PLOT_CORE_FIELDS = {"grid_id", "global_x", "global_y", "dbh_m", "height_m"}
 
 MONITORING_RENAME_MAP = {
+    "序号": "source_sequence_id",
     "tag": "tree_id",
     "subqudrat": "subplot_id",
     "spname": "species_cn_raw",
+    "Unnamed: 7": "tree_species_label",
+    "建模每木": "model_tree_label",
     "修订名(FOC为主)": "species_cn",
     "拉丁学名（不带名字）": "species_latin",
     "拉丁学名": "species_latin_raw",
@@ -636,15 +639,9 @@ def _merge_species_reference(monitor_df: pd.DataFrame) -> pd.DataFrame:
     return work
 
 
-@lru_cache(maxsize=2)
-def load_monitoring_data(enrich_for_agb: bool = True) -> pd.DataFrame:
-    """
-    加载 20 公顷监测表并标准化为系统可用字段。
-
-    注意：
-    - 监测表本身不直接提供树高/木材密度，本函数可选通过旧表按物种参考值补齐，
-      以便复用现有 AGB 计算与出图链路（属于估算补齐）。
-    """
+@lru_cache(maxsize=1)
+def load_monitoring_records() -> pd.DataFrame:
+    """读取并标准化完整调查记录，不聚合 branch，供数据库导入。"""
     monitoring_file, monitoring_sheet = _resolve_monitoring_source()
     df = pd.read_excel(
         monitoring_file,
@@ -655,6 +652,7 @@ def load_monitoring_data(enrich_for_agb: bool = True) -> pd.DataFrame:
 
     # 字段映射到统一的数据访问层标准名。
     df = df.rename(columns=_build_rename_map(df.columns, _MONITORING_ALIAS_LOOKUP))
+    df = df.drop(columns=[column for column in df.columns if str(column).startswith("Unnamed:")], errors="ignore")
 
     # 清洗字符串
     for col in [
@@ -681,6 +679,13 @@ def load_monitoring_data(enrich_for_agb: bool = True) -> pd.DataFrame:
     ]:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    return df
+
+
+def prepare_monitoring_data(df: pd.DataFrame, enrich_for_agb: bool = True) -> pd.DataFrame:
+    """将数据库中的完整调查记录聚合为工具使用的单木级数据。"""
+    df = df.copy()
 
     # 按 tree_id 聚合：同一树的多枝条 DBH 合并为等效胸径
     df = _aggregate_monitoring_tree_level(df)
@@ -711,6 +716,12 @@ def load_monitoring_data(enrich_for_agb: bool = True) -> pd.DataFrame:
         df["status"] = df["status"].str.lower().replace({"alive": "alive", "dead": "dead"})
 
     return df
+
+
+@lru_cache(maxsize=2)
+def load_monitoring_data(enrich_for_agb: bool = True) -> pd.DataFrame:
+    """从原调查表加载记录，并按工具规则聚合到单木级。"""
+    return prepare_monitoring_data(load_monitoring_records(), enrich_for_agb)
 
 
 @lru_cache(maxsize=2)
@@ -858,6 +869,26 @@ def load_large_plot_segmentation_data() -> pd.DataFrame:
         df["grid_y_20m"] = (df["global_y"] // 20).astype("Int64")
 
     return df
+
+
+def prepare_segmentation_data(df: pd.DataFrame, enrich_for_agb: bool = True) -> pd.DataFrame:
+    """为数据库中的完整单木分割记录补齐工具计算所需的派生字段。"""
+    work = df.copy()
+    if "dbh_m" in work.columns:
+        work["dbh_cm"] = pd.to_numeric(work["dbh_m"], errors="coerce") * 100.0
+    if "global_x" in work.columns and "global_y" in work.columns:
+        work["grid_x_20m"] = (pd.to_numeric(work["global_x"], errors="coerce") // 20).astype("Int64")
+        work["grid_y_20m"] = (pd.to_numeric(work["global_y"], errors="coerce") // 20).astype("Int64")
+    if enrich_for_agb:
+        traits = load_traits()
+        mean_wd = float(traits["wood_density_g_cm3"].dropna().mean())
+        if "wood_density_g_cm3" not in work:
+            work["wood_density_g_cm3"] = mean_wd
+        else:
+            work["wood_density_g_cm3"] = pd.to_numeric(work["wood_density_g_cm3"], errors="coerce").fillna(mean_wd)
+        work["height_imputed"] = False
+        work["wd_imputed"] = True
+    return work
 
 
 def load_vegetation_type_classification() -> pd.DataFrame:

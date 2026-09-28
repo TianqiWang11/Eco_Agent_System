@@ -34,6 +34,11 @@ class SessionStore:
                     seq INTEGER PRIMARY KEY AUTOINCREMENT, session_id TEXT NOT NULL,
                     kind TEXT NOT NULL, time REAL NOT NULL, public TEXT NOT NULL);
                 CREATE INDEX IF NOT EXISTS events_session ON events(session_id, seq);
+                CREATE TABLE IF NOT EXISTS developer_events (
+                    seq INTEGER PRIMARY KEY AUTOINCREMENT, session_id TEXT NOT NULL,
+                    kind TEXT NOT NULL, time REAL NOT NULL, details TEXT NOT NULL);
+                CREATE INDEX IF NOT EXISTS developer_events_session
+                    ON developer_events(session_id, seq);
                 CREATE TABLE IF NOT EXISTS checkpoints (
                     session_id TEXT NOT NULL, revision INTEGER NOT NULL,
                     state TEXT NOT NULL, time REAL NOT NULL,
@@ -57,6 +62,7 @@ class SessionStore:
                  "pending": [], "ledger": {}, "results": [], "approval": None,
                  "current_action": None, "action_history": [], "input_request": None,
                  "wait": None, "final": None, "created_at": time.time()}
+        state["task_state"] = {"known_facts": [], "constraints": [], "open_questions": [], "completed_steps": []}
         with self.connect() as db:
             db.execute("INSERT INTO sessions VALUES (?,?,?,?)",
                        (sid, hashlib.sha256(token.encode()).hexdigest(), 0, encode(state)))
@@ -93,11 +99,24 @@ class SessionStore:
                              (sid, kind, now, encode(public))).lastrowid
         return {"id": seq, "session_id": sid, "kind": kind, "time": now, **public}
 
+    def developer_event(self, sid: str, kind: str, details: dict):
+        with self.connect() as db:
+            db.execute("INSERT INTO developer_events(session_id,kind,time,details) VALUES (?,?,?,?)",
+                       (sid, kind, time.time(), encode(details)))
+
     def events(self, sid: str, after: int = 0):
         with self.connect() as db:
             rows = db.execute("SELECT seq,kind,time,public FROM events WHERE session_id=? AND seq>? ORDER BY seq LIMIT 200",
                               (sid, after)).fetchall()
         return [{"id": seq, "kind": kind, "time": ts, **json.loads(body)} for seq, kind, ts, body in rows]
+
+    def developer_events(self, sid: str):
+        with self.connect() as db:
+            rows = db.execute(
+                "SELECT seq,kind,time,details FROM developer_events WHERE session_id=? ORDER BY seq", (sid,)
+            ).fetchall()
+        return [{"id": seq, "kind": kind, "time": ts, "details": json.loads(body)}
+                for seq, kind, ts, body in rows]
 
     def recover(self):
         """On exclusive application startup, mark unfinished work, never replay it."""

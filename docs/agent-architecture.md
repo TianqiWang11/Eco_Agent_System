@@ -5,7 +5,8 @@
 The App Server uses `src/agent` for both `/agent/*` and the synchronous
 `/chat` transport. Old orchestration, parser, pipelines and composer have been removed.
 Only the original Python business tools are inherited into `tools/local_tools/`.
-Get_data owns Excel source adapters, Predict owns its trained model and code-defined
+Get_data owns import adapters but reads active analysis data from PostgreSQL. Knowledge
+retrieval uses an independent LlamaIndex + Chroma persistent vector database. Predict owns its trained model and code-defined
 workbook template, while platform data APIs live in `src/platform/data`.
 
 This is a **modular, single-host/single-worker runtime**, not a production distributed
@@ -23,6 +24,7 @@ src/agent/
     loop.py                seven-stage bounded Agent Action loop
     actions.py             strict Action validation, execution and loop control
     context.py             Context Manager, paired-message compaction, result refs
+    prompts.py             stable System Prompt and finite Action policy
     model.py               provider response → finite Action contract adapter
     provider.py            model connection settings, no routing or answer generation
     dispatcher.py          schema validation, write-ahead execution ledger, approvals
@@ -31,8 +33,8 @@ src/agent/
   tools/
     registry.py            explicit tool registry, JSON Schema validation
     local_tools/           original Python functions + new structured adapters/registration
-    sandbox_tools.py       workspace/result and sandbox tool registration
     mcp.py                 MCP tools and resources through Streamable HTTP
+  environment/             PostgreSQL business-data repository/bootstrap
   sandbox/
     interface.py           SandboxInterface
     local.py               LocalSandbox: trusted file operations only
@@ -116,7 +118,7 @@ current Action, bounded Action history, pending calls, execution ledger, results
 approval/input/wait state, step budget and final response.
 SQLite stores session snapshots, revisions, checkpoint history and safe ordered events.
 
-New sessions use contract version 3. Earlier snapshots remain readable, but resume and
+New sessions use contract version 4. Earlier snapshots remain readable, but resume and
 follow-up are rejected for earlier contracts to avoid executing stale tool parameters.
 Create a new task after updating; historical task data is not deleted.
 
@@ -140,8 +142,8 @@ mean generated delivery requests, not proof of UE execution.
 
 Approvals bind to the exact call and arguments via a digest. Stale/repeated approvals
 are refused. A denial is returned to the model as a tool result. Model calls cannot
-approve their own tools or change policy. Workspace writes, scene changes, Docker
-execution and all MCP operations require approval. Existing trusted ecological
+approve their own tools or change policy. Scene changes and generic MCP operations
+require approval. Existing trusted ecological
 calculations and local reads run without an extra prompt.
 
 Long-running work continues after the browser disconnects. A refresh can replay safe
@@ -189,7 +191,11 @@ side effects are not controlled by our Docker sandbox. Network policy here is an
 application allowlist, **not a host firewall**, and does not cover arbitrary local tool
 network calls. Production must add gateway/egress controls and response size limits.
 
-## Sandbox
+## Sandbox (deferred)
+
+Sandbox code is retained as a future boundary, but it is not constructed and its tools
+are not registered in the current Runtime because no active platform capability needs
+model-generated code execution.
 
 `LocalSandbox` only reads/creates UTF-8 files in a session workspace (64 KiB limit),
 rejects path escape/absolute paths/Windows alternate streams and refuses overwrite.
@@ -210,12 +216,11 @@ disabled-mode behavior are tested, actual container execution has not been verif
 
 ## Telemetry and frontend
 
-Each module emits named events; a whitelist projects only event kind, generic UI label,
-tool/call identifiers, counts and error class. Raw prompts, tool arguments, result bodies,
-exception text, model reasoning and secrets are not exported. Prompt receipt/result
-completion are represented by events and counts, not payload capture. Approval arguments
-are available through the protected task endpoint so the user can make an informed
-decision, but they are not in SSE or OTLP.
+Each module emits detailed developer events to the private checkpoint database and
+OpenTelemetry. The user SSE is a separate projection containing only a stable stage and
+generic message such as “正在理解你的需求” or “正在调用工具处理任务”. It never contains
+tool names, parameters, Session state, prompts, result bodies, exception text, reasoning
+or secrets. The user task endpoint exposes only a coarse phase and required interaction.
 
 With `AGENT_OTLP_ENDPOINT=http://127.0.0.1:4318`, traces, logs and metrics are exported
 to `/v1/traces`, `/v1/logs`, `/v1/metrics`. Run/model/tool spans and session IDs correlate

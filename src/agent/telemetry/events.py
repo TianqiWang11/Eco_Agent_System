@@ -5,54 +5,19 @@ Only selected execution metadata is exported and streamed to the UI.
 """
 import logging
 import os
+import threading
 from contextlib import contextmanager
 
-LABELS = {
-    "session.created": "正在准备回答…",
-    "session.started": "正在理解你的问题…",
-    "prompt.received": "正在理解你的问题…",
-    "model.started": "正在整理结果…",
-    "model.completed": "正在整理结果…",
-    "context.compacted": "正在整理对话上下文…",
-    "tool.started": "正在查询和处理相关数据…",
-    "tool.completed": "正在整理查询结果…",
-    "tool.failed": "数据处理未完成，正在调整…",
-    "approval.requested": "需要你的确认后才能继续",
-    "approval.approved": "已确认，正在继续处理…",
-    "approval.denied": "已取消该操作，正在整理回答…",
-    "network.allowed": "连接检查已通过",
-    "network.denied": "连接未通过安全检查",
-    "mcp.started": "正在读取任务所需的外部资源…",
-    "mcp.completed": "外部资源读取完成，正在整理…",
-    "session.completed": "回答已生成",
-    "session.failed": "任务未能完成",
-    "session.interrupted": "任务已中断",
-    "session.resumed": "正在恢复任务…",
-    "user.input_required": "需要你补充一项关键信息",
-    "session.waiting": "正在等待外部处理",
-    "action.selected": "正在执行下一步…",
+PROGRESS = {
+    "session.started": ("understanding", "正在理解你的需求…"),
+    "tool.started": ("working", "正在调用工具处理任务…"),
+    "mcp.started": ("working", "正在调用工具处理任务…"),
+    "approval.requested": ("approval", "需要你的确认后才能继续"),
+    "user.input_required": ("clarifying", "需要你补充一项关键信息"),
+    "session.waiting": ("waiting", "正在等待外部处理…"),
+    "session.failed": ("failed", "任务未能完成"),
 }
-
-# Only these coarse stages are exposed by the App Server event stream.
-VISIBLE_EVENT_KINDS = {
-    "session.started",
-    "prompt.received",
-    "model.started",
-    "tool.started",
-    "tool.completed",
-    "tool.failed",
-    "approval.requested",
-    "approval.approved",
-    "approval.denied",
-    "mcp.started",
-    "mcp.completed",
-    "session.completed",
-    "session.failed",
-    "session.interrupted",
-    "session.resumed",
-    "user.input_required",
-    "session.waiting",
-}
+VISIBLE_EVENT_KINDS = {"user.progress"}
 
 
 class Telemetry:
@@ -61,6 +26,8 @@ class Telemetry:
         self.provider = self.meter_provider = self.logger_provider = None
         self.logger = logging.getLogger("agent.audit")
         self.tracer = self.counter = self.otel_logger = None
+        self._progress = {}
+        self._progress_lock = threading.Lock()
         try:
             from opentelemetry.sdk.resources import Resource
             from opentelemetry.sdk.trace import TracerProvider
@@ -103,17 +70,24 @@ class Telemetry:
             yield
 
     def emit(self, sid, kind, **metadata):
-        # The durable public projection never contains tool names, arguments,
-        # call IDs, prompt sizes, exception types, or arbitrary text.
-        public = {"message": LABELS.get(kind, "任务状态已更新")}
-        event = self.store.event(sid, kind, public)
+        if kind == "prompt.received":
+            with self._progress_lock:
+                self._progress.pop(sid, None)
+        internal = {key: str(metadata[key])[:256] for key in (
+            "tool", "call_id", "count", "step", "chars", "error_type"
+        ) if key in metadata}
+        self.store.developer_event(sid, kind, internal)
+        event = None
+        progress = PROGRESS.get(kind)
+        if progress:
+            stage, message = progress
+            with self._progress_lock:
+                if self._progress.get(sid) != stage:
+                    self._progress[sid] = stage
+                    event = self.store.event(sid, "user.progress", {"stage": stage, "message": message})
 
         # Selected metadata remains internal to OpenTelemetry and is never
         # returned by the user-facing SSE endpoint.
-        internal = dict(public)
-        for key in ("tool", "call_id", "count", "step", "chars", "error_type"):
-            if key in metadata:
-                internal[key] = str(metadata[key])[:128]
         try:
             with self.span(kind, sid):
                 if self.tracer:

@@ -5,10 +5,8 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from .session import SessionStore
 from .telemetry import Telemetry
-from .sandbox import SandboxManager
 from .tools.registry import ToolRegistry
 from .tools.local_tools import register_local
-from .tools.sandbox_tools import register_sandbox
 from .tools.mcp import MCPTools
 from .harness.context import ContextManager
 from .harness.policy import Policy
@@ -17,7 +15,7 @@ from .harness.model import ToolCallingModel
 from .harness.loop import AgentLoop
 from .contracts import ToolCall
 
-CONTRACT_VERSION = 3
+CONTRACT_VERSION = 4
 
 
 class Runtime:
@@ -38,12 +36,10 @@ class Runtime:
             if not isinstance(servers, dict):
                 raise ValueError("MCP config 'servers' must be an object")
         self.policy = Policy([item["url"] for item in servers.values()])
-        self.sandbox = SandboxManager(root / "workspaces", os.getenv("AGENT_DOCKER_ENABLED") == "true",
-                                      os.getenv("AGENT_DOCKER_IMAGE", "python:3.11-slim"))
+        self.sandbox = None  # Sandbox is deliberately outside the active runtime until a task needs it.
         self.registry = registry or ToolRegistry()
         if registry is None:
             register_local(self.registry)
-            register_sandbox(self.registry)
             MCPTools(servers).register(self.registry)
         if model is None:
             self.policy.allowed_endpoints.add(ToolCallingModel.network_endpoint())
@@ -141,6 +137,7 @@ class Runtime:
             state.update(query=query, status="queued", step=0, pending=[], results=[], approval=None, final=None,
                          current_action=None, input_request=None, wait=None,
                          turn=state["turn"] + 1, query_pinned=False, fast_route=False)
+            state["task_state"] = {"known_facts": [], "constraints": [], "open_questions": [], "completed_steps": []}
             self.store.save(state)
             self.telemetry.emit(sid, "prompt.received", chars=len(query))
             self.submit(sid)
@@ -156,9 +153,19 @@ class Runtime:
             }
         public_input = state.get("input_request") if state["status"] == "awaiting_input" else None
         public_wait = state.get("wait") if state["status"] == "waiting" else None
+        phases = {"queued": "working", "running": "working", "awaiting_approval": "needs_approval",
+                  "awaiting_input": "needs_input", "waiting": "waiting", "completed": "done",
+                  "cancelled": "done", "failed": "error", "interrupted": "error"}
         return {"id": sid, "status": state["status"], "turn": state["turn"], "step": state["step"],
-                "contract_version": state.get("contract_version"), "final": state["final"],
+                "contract_version": state.get("contract_version"),
+                "phase": phases.get(state["status"], "working"), "final": state["final"],
                 "approval": public_approval, "input_request": public_input, "wait": public_wait}
+
+    def user_view(self, sid):
+        snapshot = self.public(sid)
+        return {key: snapshot[key] for key in (
+            "id", "phase", "final", "approval", "input_request", "wait"
+        )}
 
     def close(self):
         self.executor.shutdown(wait=True)

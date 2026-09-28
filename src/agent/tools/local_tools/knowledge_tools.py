@@ -1,8 +1,5 @@
 # Local Tools: business computation/retrieval, without agent orchestration.
 """Knowledge retrieval only. Answer generation belongs to the Harness."""
-from pathlib import Path
-
-
 def retrieve_knowledge(query: str, top_k: int = 4) -> dict:
     """
     从知识索引检索与问题最相关的文本片段。
@@ -11,10 +8,7 @@ def retrieve_knowledge(query: str, top_k: int = 4) -> dict:
         包含来源列表、逐片段结果和拼接后的上下文文本。
     """
     from src.agent.tools.local_tools.knowledge.query_engine import get_retriever
-
-    retriever = get_retriever(top_k=top_k)
-    nodes = retriever.retrieve(query)
-
+    nodes = get_retriever(top_k=top_k).retrieve(query)
     if not nodes:
         return {
             "sources": [],
@@ -28,13 +22,7 @@ def retrieve_knowledge(query: str, top_k: int = 4) -> dict:
     for node_with_score in nodes[:top_k]:
         node = node_with_score.node
         text = node.get_content()
-
-        metadata = node.metadata or {}
-        file_path = metadata.get("file_path", "")
-        source = metadata.get("source_name") or (
-            Path(file_path).stem if file_path else metadata.get("file_name", "unknown")
-        )
-
+        source = (node.metadata or {}).get("source_name", "unknown")
         source_names.append(source)
         results.append(
             {

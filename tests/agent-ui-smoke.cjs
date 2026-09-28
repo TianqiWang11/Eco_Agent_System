@@ -28,10 +28,10 @@ const server = http.createServer((req, res) => {
   if (url.pathname.endsWith('/events')) {
     assert.equal(req.headers.authorization, 'Bearer fixture');
     res.setHeader('Content-Type','text/event-stream');
-    const event = approved ? {id:2,kind:'session.completed',message:'任务已完成'} : {id:1,kind:'approval.requested',message:'等待工具执行审批'};
+    const event = approved ? {id:2,kind:'user.progress',stage:'working',message:'正在调用工具处理任务…'} : {id:1,kind:'user.progress',stage:'approval',message:'需要你的确认后才能继续'};
     res.end('id: '+event.id+'\nevent: trace\ndata: '+JSON.stringify(event)+'\n\n');return;
   }
-  if (url.pathname.startsWith('/agent/sessions/')) return send({id:'a'.repeat(32),status:approved?'completed':'awaiting_approval',
+  if (url.pathname.startsWith('/agent/sessions/')) return send({id:'a'.repeat(32),phase:approved?'done':'needs_approval',
     final:approved?{answer:'测试完成',artifacts:[{title:'预测数据',filename:'dbh_predictions_2030_random_50.xlsx',mime:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',content_base64:'UEsDBAoAAAAA'}],
       ue_actions:[{type:'apply_prediction',target_id:'0107029',species:'绒毛润楠',year:2030,dbh_m:0.3,tree_height_m:8,crown_diameter_ns_m:3,crown_diameter_ew_m:3,crown_volume_m3:20,focus:true}]}:null,
     approval:approved?null:{digest:'b'.repeat(64),summary:'继续执行这项受控操作需要你的确认。'}});

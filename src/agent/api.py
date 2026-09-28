@@ -40,7 +40,7 @@ def create_session(body: Prompt):
 
 @router.get("/sessions/{sid}")
 def task(sid: str, authorization: str | None = Header(default=None)):
-    return authorize(sid, authorization).public(sid)
+    return authorize(sid, authorization).user_view(sid)
 
 
 @router.post("/sessions/{sid}/turns", status_code=202)

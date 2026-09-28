@@ -67,8 +67,6 @@ def relevant_tool_names(query: str) -> set[str]:
         names.add("web_search")
     if "mcp" in text:
         names.update({"mcp_list_tools", "mcp_call_tool", "mcp_list_resources", "mcp_read_resource"})
-    if any(word in text for word in ("sandbox", "沙箱", "python脚本", "运行代码", "工作区", "创建文件")):
-        names.update({"workspace_read", "workspace_write", "sandbox_python"})
     return names
 
 

@@ -1,6 +1,6 @@
 /* Session capabilities stay in request headers and are never placed in URLs. */
 window.Agent = (() => {
-  const storageKey = "agent.current-task.v3";
+  const storageKey = "agent.current-task.v4";
   let current = null;
   let busy = false;
 
@@ -72,7 +72,7 @@ window.Agent = (() => {
       reader.releaseLock();
     }
     const status = await (await request(`/agent/sessions/${task.id}`, "GET", null, task)).json();
-    task.status = status.status;
+    task.phase = status.phase;
     task.approval = status.approval || null;
     save();
     return status;
@@ -80,7 +80,7 @@ window.Agent = (() => {
 
   function publicResult(task) {
     if (task.final) return task.final;
-    if (task.status === "awaiting_approval" && task.approval) {
+    if (task.phase === "needs_approval" && task.approval) {
       return {
         answer: task.approval.summary || "继续执行这一步需要你的确认。",
         artifacts: [],
@@ -88,7 +88,7 @@ window.Agent = (() => {
       };
     }
     return {
-      answer: task.status === "failed" ? "任务未能完成，请重试。" : "任务暂时中断，请重新发送请求。",
+      answer: task.phase === "error" ? "任务未能完成，请重试。" : "任务暂时中断，请重新发送请求。",
       artifacts: [],
     };
   }
@@ -97,14 +97,14 @@ window.Agent = (() => {
     if (busy) throw new Error("当前请求仍在处理中。");
     busy = true;
     try {
-      if (!current || ["failed", "interrupted", "cancelled"].includes(current.status)) {
+      if (!current || ["error"].includes(current.phase)) {
         const data = await (await request("/agent/sessions", "POST", { message }, null)).json();
-        current = { ...data, cursor: 0, status: "queued", approval: null };
-      } else if (current.status === "awaiting_approval") {
+        current = { ...data, cursor: 0, phase: "working", approval: null };
+      } else if (current.phase === "needs_approval") {
         throw new Error("请先确认或拒绝当前操作。");
       } else {
         await request(`/agent/sessions/${current.id}/turns`, "POST", { message });
-        current.status = "queued";
+        current.phase = "working";
       }
       save();
       return publicResult(await watch(current, onProgress));
@@ -118,7 +118,7 @@ window.Agent = (() => {
     busy = true;
     try {
       await request(`/agent/sessions/${current.id}/approval`, "POST", { digest, allow });
-      current.status = "queued";
+      current.phase = "working";
       current.approval = null;
       save();
       return publicResult(await watch(current, onProgress));

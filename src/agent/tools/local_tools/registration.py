@@ -26,7 +26,8 @@ SCENE_SCHEMA = object_schema({
 KNOWLEDGE_SCHEMA = object_schema({"query": {"type": "string", "minLength": 1, "maxLength": 4000},
                                   "top_k": {"type": "integer", "minimum": 1, "maximum": 5}}, ["query"])
 DATABASE_SCHEMA = object_schema({
-    "operation": {"type": "string", "enum": ["summary", "search_trees", "tree_detail"]},
+    "operation": {"type": "string", "enum": ["describe_schema", "summary", "search_trees", "tree_detail"]},
+    "table": {"type": "string", "enum": ["trees", "tree_measurements", "forest_inventory", "tree_segmentation"]},
     "tree_id": {"type": "string", "minLength": 1, "maxLength": 64},
     "species": {"type": "string", "minLength": 1, "maxLength": 100},
     "plot_id": {"type": "string", "minLength": 1, "maxLength": 64},
@@ -69,7 +70,7 @@ def register_local(registry):
     from .database_tools import query_database
     registry.register(ToolSpec(
         "database",
-        "只读查询当前车八岭PostgreSQL单木数据库。summary返回总树数、树种数、样地数和年份统计；search_trees按编号、树种、样地或年份筛选；tree_detail返回指定tree_id的固定属性及2016、2021、2025年度测量。不得虚构查询结果。",
+        "只读查询当前车八岭PostgreSQL生态数据库。字段含义、单位、数据粒度或关联不确定时先用describe_schema，可用table只取一张表；summary返回已匹配数据概况；search_trees按编号、树种、样地或年份筛选；tree_detail返回指定tree_id的固定属性及年度测量。不得把原始表内部编号当作UE编号，不得虚构关联或结果。",
         DATABASE_SCHEMA,
         lambda arguments, context: query_database(arguments),
         approval=False,
